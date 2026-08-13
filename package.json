@@ -1,0 +1,17 @@
+{
+  "name": "fittrack",
+  "version": "1.0.0",
+  "description": "FitTrack - nutrition and workout tracker (React + Express + SQLite)",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently -n server,client -c green,cyan \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "start": "npm run build --prefix client && npm start --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4"
+  }
+}
