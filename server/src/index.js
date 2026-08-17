@@ -20,6 +20,28 @@ function round1(n) {
   return Math.round(n * 10) / 10;
 }
 
+// Given an array of 'YYYY-MM-DD' date strings (any order, dupes ok), return the
+// length of the longest run of consecutive calendar dates.
+function longestConsecutiveRun(dateStrings) {
+  const sorted = [...new Set(dateStrings)].sort();
+  let longest = 0;
+  let current = 0;
+  let prev = null;
+  for (const d of sorted) {
+    if (prev !== null) {
+      const prevDate = new Date(prev + "T00:00:00");
+      const curDate = new Date(d + "T00:00:00");
+      const diffDays = Math.round((curDate - prevDate) / 86400000);
+      current = diffDays === 1 ? current + 1 : 1;
+    } else {
+      current = 1;
+    }
+    longest = Math.max(longest, current);
+    prev = d;
+  }
+  return longest;
+}
+
 // ---------- Foods ----------
 
 // Search / list foods
@@ -478,6 +500,177 @@ app.get("/api/streak", (req, res) => {
     cursor = d.toISOString().slice(0, 10);
   }
   res.json({ streak, loggedToday: dates.has(todayStr()) });
+});
+
+// ---------- Achievements ----------
+// Server-computed badge unlock state, purely derived from existing tables — no new storage.
+app.get("/api/achievements", (req, res) => {
+  const settings = db.prepare("SELECT * FROM settings WHERE id = 1").get();
+
+  const foodLogCount = db.prepare("SELECT COUNT(*) AS c FROM food_logs").get().c;
+  const foodDates = db.prepare("SELECT DISTINCT date FROM food_logs").all().map((r) => r.date);
+  const longestFoodStreak = longestConsecutiveRun(foodDates);
+
+  const workoutCount = db.prepare("SELECT COUNT(*) AS c FROM workout_logs").get().c;
+  const prCount = db.prepare("SELECT COUNT(*) AS c FROM personal_records").get().c;
+  const photoCount = db.prepare("SELECT COUNT(*) AS c FROM physique_photos").get().c;
+  const measurementCount = db.prepare("SELECT COUNT(*) AS c FROM body_measurements").get().c;
+
+  const maxWaterDay =
+    db
+      .prepare(
+        `SELECT MAX(total) AS maxTotal FROM (
+           SELECT date, SUM(amount_ml) AS total FROM water_logs GROUP BY date
+         )`
+      )
+      .get().maxTotal || 0;
+
+  const dailyCalorieRows = db
+    .prepare(
+      `SELECT fl.date AS date, SUM(f.calories * fl.servings) AS calories
+       FROM food_logs fl JOIN foods f ON f.id = fl.food_id
+       GROUP BY fl.date`
+    )
+    .all();
+  const calorieGoalLow = settings.calorie_goal * 0.9;
+  const calorieGoalHigh = settings.calorie_goal * 1.1;
+  const goalGetterHit = dailyCalorieRows.some(
+    (r) => r.calories >= calorieGoalLow && r.calories <= calorieGoalHigh
+  );
+
+  const achievements = [
+    {
+      key: "first_bite",
+      label: "First Bite",
+      description: "Log your first food entry",
+      unlocked: foodLogCount > 0,
+      progress: null,
+    },
+    {
+      key: "week_warrior",
+      label: "Week Warrior",
+      description: "Log food 7 days in a row",
+      unlocked: longestFoodStreak >= 7,
+      progress: { current: Math.min(longestFoodStreak, 7), target: 7 },
+    },
+    {
+      key: "consistency_champion",
+      label: "Consistency Champion",
+      description: "Log food 30 days in a row",
+      unlocked: longestFoodStreak >= 30,
+      progress: { current: Math.min(longestFoodStreak, 30), target: 30 },
+    },
+    {
+      key: "first_sweat",
+      label: "First Sweat",
+      description: "Log your first workout",
+      unlocked: workoutCount > 0,
+      progress: null,
+    },
+    {
+      key: "iron_habit",
+      label: "Iron Habit",
+      description: "Log 10 workouts total",
+      unlocked: workoutCount >= 10,
+      progress: { current: Math.min(workoutCount, 10), target: 10 },
+    },
+    {
+      key: "pr_setter",
+      label: "PR Setter",
+      description: "Record your first personal record",
+      unlocked: prCount > 0,
+      progress: null,
+    },
+    {
+      key: "strength_streak",
+      label: "Strength Streak",
+      description: "Record 5 personal records",
+      unlocked: prCount >= 5,
+      progress: { current: Math.min(prCount, 5), target: 5 },
+    },
+    {
+      key: "snap_shot",
+      label: "Snap Shot",
+      description: "Upload your first progress photo",
+      unlocked: photoCount > 0,
+      progress: null,
+    },
+    {
+      key: "transformation",
+      label: "Transformation",
+      description: "Upload 3 progress photos",
+      unlocked: photoCount >= 3,
+      progress: { current: Math.min(photoCount, 3), target: 3 },
+    },
+    {
+      key: "on_the_scale",
+      label: "On The Scale",
+      description: "Log your first body measurement",
+      unlocked: measurementCount > 0,
+      progress: null,
+    },
+    {
+      key: "hydration_hero",
+      label: "Hydration Hero",
+      description: "Hit your daily water goal",
+      unlocked: maxWaterDay >= settings.water_goal_ml,
+      progress: null,
+    },
+    {
+      key: "goal_getter",
+      label: "Goal Getter",
+      description: "Log a day within 10% of your calorie goal",
+      unlocked: goalGetterHit,
+      progress: null,
+    },
+  ];
+
+  res.json({ achievements });
+});
+
+// ---------- Weekly Activity Heatmap ----------
+app.get("/api/activity-heatmap", (req, res) => {
+  let weeks = parseInt(req.query.weeks || "12", 10);
+  if (!Number.isFinite(weeks) || weeks < 1) weeks = 12;
+  weeks = Math.min(weeks, 26);
+
+  const totalDays = weeks * 7;
+  const end = new Date(todayStr() + "T00:00:00");
+  const start = new Date(end);
+  start.setDate(start.getDate() - (totalDays - 1));
+
+  const startDate = start.toISOString().slice(0, 10);
+  const endDate = end.toISOString().slice(0, 10);
+
+  const foodRows = db
+    .prepare(
+      `SELECT fl.date AS date, SUM(f.calories * fl.servings) AS calories
+       FROM food_logs fl JOIN foods f ON f.id = fl.food_id
+       WHERE fl.date >= ? AND fl.date <= ?
+       GROUP BY fl.date`
+    )
+    .all(startDate, endDate);
+  const foodMap = new Map(foodRows.map((r) => [r.date, round1(r.calories)]));
+
+  const workoutRows = db
+    .prepare(`SELECT DISTINCT date FROM workout_logs WHERE date >= ? AND date <= ?`)
+    .all(startDate, endDate);
+  const workoutSet = new Set(workoutRows.map((r) => r.date));
+
+  const days = [];
+  const cursor = new Date(start);
+  for (let i = 0; i < totalDays; i++) {
+    const dateStr = cursor.toISOString().slice(0, 10);
+    days.push({
+      date: dateStr,
+      hasFoodLog: foodMap.has(dateStr),
+      hasWorkout: workoutSet.has(dateStr),
+      calories: foodMap.get(dateStr) || 0,
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  res.json({ weeks, startDate, endDate, days });
 });
 
 // ---------- Body Measurements ----------
