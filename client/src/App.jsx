@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Diary from "./pages/Diary";
 import Foods from "./pages/Foods";
 import Workouts from "./pages/Workouts";
+import Progress from "./pages/Progress";
 import Settings from "./pages/Settings";
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/diary" element={<Diary />} />
           <Route path="/foods" element={<Foods />} />
           <Route path="/workouts" element={<Workouts />} />
+          <Route path="/progress" element={<Progress />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>

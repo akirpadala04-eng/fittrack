@@ -48,6 +48,11 @@ export const api = {
   createWorkoutLog: (data) => request("/workout-logs", { method: "POST", body: JSON.stringify(data) }),
   deleteWorkoutLog: (id) => request(`/workout-logs/${id}`, { method: "DELETE" }),
 
+  // Physique photos
+  getPhotos: () => request("/photos"),
+  createPhoto: (data) => request("/photos", { method: "POST", body: JSON.stringify(data) }),
+  deletePhoto: (id) => request(`/photos/${id}`, { method: "DELETE" }),
+
   // Settings
   getSettings: () => request("/settings"),
   updateSettings: (data) => request("/settings", { method: "PUT", body: JSON.stringify(data) }),
@@ -76,4 +81,9 @@ export function shiftDate(dateStr, deltaDays) {
   const d = new Date(dateStr + "T00:00:00");
   d.setDate(d.getDate() + deltaDays);
   return d.toISOString().slice(0, 10);
+}
+
+export function formatFullDate(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
