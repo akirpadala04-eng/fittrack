@@ -1,11 +1,24 @@
 import { NavLink } from "react-router-dom";
-import { IconHome, IconBook, IconApple, IconDumbbell, IconCamera, IconGear } from "./Icons";
+import {
+  IconHome,
+  IconBook,
+  IconApple,
+  IconDumbbell,
+  IconCalendar,
+  IconCamera,
+  IconScale,
+  IconTrophy,
+  IconGear,
+} from "./Icons";
 
 const links = [
   { to: "/", label: "Dashboard", icon: IconHome, end: true },
   { to: "/diary", label: "Food Diary", icon: IconBook },
   { to: "/foods", label: "Food Database", icon: IconApple },
   { to: "/workouts", label: "Workouts", icon: IconDumbbell },
+  { to: "/split-planner", label: "Split Planner", icon: IconCalendar },
+  { to: "/measurements", label: "Measurements", icon: IconScale },
+  { to: "/records", label: "Personal Records", icon: IconTrophy },
   { to: "/progress", label: "Progress Photos", icon: IconCamera },
   { to: "/settings", label: "Settings", icon: IconGear },
 ];

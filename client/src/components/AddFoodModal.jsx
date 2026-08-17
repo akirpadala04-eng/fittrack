@@ -5,9 +5,16 @@ import { IconSearch, IconX, IconPlus } from "./Icons";
 export default function AddFoodModal({ mealLabel, onClose, onAdd }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
+  const [favorites, setFavorites] = useState([]);
+  const [recent, setRecent] = useState([]);
   const [selected, setSelected] = useState(null);
   const [servings, setServings] = useState(1);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    api.getFoods({ favorite: "1" }).then(setFavorites);
+    api.getRecentFoods(6).then(setRecent);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,12 +60,49 @@ export default function AddFoodModal({ mealLabel, onClose, onAdd }) {
                   onChange={(e) => setQuery(e.target.value)}
                 />
               </div>
+              {!query && (favorites.length > 0 || recent.length > 0) && (
+                <div className="mt-16 flex-col gap-16">
+                  {favorites.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-muted mb-8">⭐ FAVORITES</div>
+                      <div className="flex-col">
+                        {favorites.map((f) => (
+                          <div key={f.id} className="list-row" onClick={() => setSelected(f)}>
+                            <div className="food-row-main">
+                              <div className="food-row-name">{f.name}</div>
+                              <div className="food-row-meta">{f.serving_size} {f.serving_unit}</div>
+                            </div>
+                            <div className="food-row-cals">{Math.round(f.calories)} cal</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {recent.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-muted mb-8">RECENTLY LOGGED</div>
+                      <div className="flex-col">
+                        {recent.map((f) => (
+                          <div key={f.id} className="list-row" onClick={() => setSelected(f)}>
+                            <div className="food-row-main">
+                              <div className="food-row-name">{f.name}</div>
+                              <div className="food-row-meta">{f.serving_size} {f.serving_unit}</div>
+                            </div>
+                            <div className="food-row-cals">{Math.round(f.calories)} cal</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="mt-16 flex-col">
                 {loading && <div className="empty-row">Searching…</div>}
-                {!loading && results.length === 0 && (
+                {!loading && query && results.length === 0 && (
                   <div className="empty-row">No foods found. Try a different search, or add a custom food from the Food Database page.</div>
                 )}
                 {!loading &&
+                  (query || (favorites.length === 0 && recent.length === 0)) &&
                   results.map((f) => (
                     <div key={f.id} className="list-row" onClick={() => setSelected(f)}>
                       <div className="food-row-main">

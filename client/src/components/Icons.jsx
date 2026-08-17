@@ -109,3 +109,54 @@ export const IconCamera = (p) => (
     <circle cx="12" cy="12.5" r="3.6" />
   </svg>
 );
+
+export const IconCalendar = (p) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <rect x="4" y="5.5" width="16" height="15" rx="2" />
+    <path d="M4 10h16" />
+    <path d="M8 3.5v4M16 3.5v4" />
+  </svg>
+);
+
+export const IconRefresh = (p) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <path d="M4 12a8 8 0 0 1 13.66-5.66L20 8" />
+    <path d="M20 4v4h-4" />
+    <path d="M20 12a8 8 0 0 1-13.66 5.66L4 16" />
+    <path d="M4 20v-4h4" />
+  </svg>
+);
+
+export const IconScale = (p) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <rect x="3.5" y="3.5" width="17" height="17" rx="3" />
+    <circle cx="12" cy="12" r="3.4" />
+    <path d="M12 8.6v.9M12 14.5v.9M8.6 12h.9M14.5 12h.9" />
+  </svg>
+);
+
+export const IconTrophy = (p) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <path d="M7 4h10v5a5 5 0 0 1-10 0z" />
+    <path d="M7 5.5H4a3 3 0 0 0 3.5 5.4M17 5.5h3a3 3 0 0 1-3.5 5.4" />
+    <path d="M12 14v3.5M8.5 20.5h7M9.5 17.5h5l.5 3h-6z" />
+  </svg>
+);
+
+export const IconDroplet = (p) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <path d="M12 3.5s6 6.7 6 11a6 6 0 0 1-12 0c0-4.3 6-11 6-11z" />
+  </svg>
+);
+
+export const IconStar = (p) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <path d="m12 4 2.4 5.1 5.6.6-4.2 3.8 1.2 5.5L12 16.2l-5 2.8 1.2-5.5-4.2-3.8 5.6-.6z" />
+  </svg>
+);
+
+export const IconStarFilled = (p) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" {...p}>
+    <path d="m12 4 2.4 5.1 5.6.6-4.2 3.8 1.2 5.5L12 16.2l-5 2.8 1.2-5.5-4.2-3.8 5.6-.6z" />
+  </svg>
+);
