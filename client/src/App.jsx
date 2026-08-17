@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
+import ChatWidget from "./components/ChatWidget";
 import Dashboard from "./pages/Dashboard";
 import Diary from "./pages/Diary";
 import Foods from "./pages/Foods";
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>
+      <ChatWidget />
     </div>
   );
 }
