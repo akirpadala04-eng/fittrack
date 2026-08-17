@@ -14,7 +14,8 @@ import { api, todayStr } from "../api";
 import DateNav from "../components/DateNav";
 import CalorieRing from "../components/CalorieRing";
 import MacroBar from "../components/MacroBar";
-import { IconFlame, IconDumbbell, IconClock, IconPlus } from "../components/Icons";
+import WaterTracker from "../components/WaterTracker";
+import { IconFlame, IconDumbbell, IconClock, IconPlus, IconCalendar } from "../components/Icons";
 
 const MEAL_LABELS = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snacks" };
 
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const [foodLogs, setFoodLogs] = useState([]);
   const [workoutLogs, setWorkoutLogs] = useState([]);
   const [history, setHistory] = useState([]);
+  const [streak, setStreak] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,6 +47,10 @@ export default function Dashboard() {
     return () => {
       cancelled = true;
     };
+  }, [date]);
+
+  useEffect(() => {
+    api.getStreak().then(setStreak);
   }, [date]);
 
   if (loading || !summary) {
@@ -95,10 +101,15 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-3 mt-24">
+      <div className="grid grid-4 mt-24">
         <StatTile icon={<IconFlame />} label="Net calories" value={Math.round(netCalories).toLocaleString()} />
         <StatTile icon={<IconDumbbell />} label="Workouts logged" value={exercise.workoutCount} />
         <StatTile icon={<IconClock />} label="Active minutes" value={Math.round(exercise.durationMinutes)} />
+        <StatTile
+          icon={<IconCalendar />}
+          label="Logging streak"
+          value={streak ? `${streak.streak} day${streak.streak === 1 ? "" : "s"}` : "…"}
+        />
       </div>
 
       <div className="card mt-24">
@@ -129,7 +140,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-2 mt-24" style={{ alignItems: "start" }}>
+      <div className="grid grid-3 mt-24" style={{ alignItems: "start" }}>
+        <WaterTracker date={date} goalMl={summary.water?.goalMl || 2000} />
+
         <div className="card">
           <div className="card-row" style={{ marginBottom: 12 }}>
             <div className="card-title">Today's meals</div>

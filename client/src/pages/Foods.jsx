@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import CustomFoodModal from "../components/CustomFoodModal";
-import { IconSearch, IconPlus, IconTrash } from "../components/Icons";
+import { IconSearch, IconPlus, IconTrash, IconStar, IconStarFilled } from "../components/Icons";
 
 export default function Foods() {
   const [query, setQuery] = useState("");
@@ -10,6 +10,7 @@ export default function Foods() {
   const [foods, setFoods] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [favoriteOnly, setFavoriteOnly] = useState(false);
 
   useEffect(() => {
     api.getFoodCategories().then(setCategories);
@@ -17,7 +18,9 @@ export default function Foods() {
 
   function reload() {
     setLoading(true);
-    api.getFoods({ q: query, category }).then((r) => {
+    const params = { q: query, category };
+    if (favoriteOnly) params.favorite = "1";
+    api.getFoods(params).then((r) => {
       setFoods(r);
       setLoading(false);
     });
@@ -27,7 +30,7 @@ export default function Foods() {
     const t = setTimeout(reload, 200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, category]);
+  }, [query, category, favoriteOnly]);
 
   async function handleCreate(data) {
     await api.createFood(data);
@@ -40,6 +43,12 @@ export default function Foods() {
     if (!confirm("Delete this custom food?")) return;
     await api.deleteFood(id);
     reload();
+  }
+
+  async function handleToggleFavorite(food) {
+    setFoods((prev) => prev.map((f) => (f.id === food.id ? { ...f, is_favorite: f.is_favorite ? 0 : 1 } : f)));
+    await api.setFoodFavorite(food.id, !food.is_favorite);
+    if (favoriteOnly) reload();
   }
 
   return (
@@ -72,6 +81,12 @@ export default function Foods() {
             </option>
           ))}
         </select>
+        <button
+          className={`btn btn-sm ${favoriteOnly ? "btn-primary" : "btn-secondary"}`}
+          onClick={() => setFavoriteOnly((v) => !v)}
+        >
+          {favoriteOnly ? <IconStarFilled width={14} height={14} /> : <IconStar width={14} height={14} />} Favorites
+        </button>
       </div>
 
       <div className="card" style={{ padding: 0 }}>
@@ -104,6 +119,14 @@ export default function Foods() {
                   <span className="font-bold">{Math.round(f.calories)} cal</span>
                   <span className="text-muted"> · {f.protein}g · {f.carbs}g · {f.fat}g</span>
                 </div>
+                <button
+                  className="btn btn-ghost btn-icon"
+                  style={{ color: f.is_favorite ? "var(--status-warning)" : undefined }}
+                  onClick={() => handleToggleFavorite(f)}
+                  aria-label="Toggle favorite"
+                >
+                  {f.is_favorite ? <IconStarFilled width={15} height={15} /> : <IconStar width={15} height={15} />}
+                </button>
                 {f.is_custom ? (
                   <button className="btn btn-danger-ghost btn-icon" onClick={() => handleDelete(f.id)}>
                     <IconTrash width={15} height={15} />
