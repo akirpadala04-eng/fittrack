@@ -5,6 +5,9 @@ import Dashboard from "./pages/Dashboard";
 import Diary from "./pages/Diary";
 import Foods from "./pages/Foods";
 import Workouts from "./pages/Workouts";
+import SplitPlanner from "./pages/SplitPlanner";
+import Measurements from "./pages/Measurements";
+import PersonalRecords from "./pages/PersonalRecords";
 import Progress from "./pages/Progress";
 import Settings from "./pages/Settings";
 
@@ -18,6 +21,9 @@ export default function App() {
           <Route path="/diary" element={<Diary />} />
           <Route path="/foods" element={<Foods />} />
           <Route path="/workouts" element={<Workouts />} />
+          <Route path="/split-planner" element={<SplitPlanner />} />
+          <Route path="/measurements" element={<Measurements />} />
+          <Route path="/records" element={<PersonalRecords />} />
           <Route path="/progress" element={<Progress />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>

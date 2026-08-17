@@ -26,8 +26,11 @@ export const api = {
     return request(`/foods${qs ? `?${qs}` : ""}`);
   },
   getFoodCategories: () => request("/foods/categories"),
+  getRecentFoods: (limit = 8) => request(`/foods/recent?limit=${limit}`),
   createFood: (data) => request("/foods", { method: "POST", body: JSON.stringify(data) }),
   deleteFood: (id) => request(`/foods/${id}`, { method: "DELETE" }),
+  setFoodFavorite: (id, isFavorite) =>
+    request(`/foods/${id}/favorite`, { method: "PUT", body: JSON.stringify({ is_favorite: isFavorite }) }),
 
   // Food logs
   getFoodLogs: (date) => request(`/food-logs?date=${date}`),
@@ -52,6 +55,29 @@ export const api = {
   getPhotos: () => request("/photos"),
   createPhoto: (data) => request("/photos", { method: "POST", body: JSON.stringify(data) }),
   deletePhoto: (id) => request(`/photos/${id}`, { method: "DELETE" }),
+
+  // Workout plan (split planner)
+  getWorkoutPlan: () => request("/workout-plan"),
+  saveWorkoutPlan: (data) => request("/workout-plan", { method: "PUT", body: JSON.stringify(data) }),
+  deleteWorkoutPlan: () => request("/workout-plan", { method: "DELETE" }),
+
+  // Body measurements
+  getMeasurements: () => request("/measurements"),
+  createMeasurement: (data) => request("/measurements", { method: "POST", body: JSON.stringify(data) }),
+  deleteMeasurement: (id) => request(`/measurements/${id}`, { method: "DELETE" }),
+
+  // Water logs
+  getWaterLogs: (date) => request(`/water-logs?date=${date}`),
+  createWaterLog: (data) => request("/water-logs", { method: "POST", body: JSON.stringify(data) }),
+  deleteWaterLog: (id) => request(`/water-logs/${id}`, { method: "DELETE" }),
+
+  // Personal records
+  getPRs: () => request("/prs"),
+  createPR: (data) => request("/prs", { method: "POST", body: JSON.stringify(data) }),
+  deletePR: (id) => request(`/prs/${id}`, { method: "DELETE" }),
+
+  // Streak
+  getStreak: () => request("/streak"),
 
   // Settings
   getSettings: () => request("/settings"),
