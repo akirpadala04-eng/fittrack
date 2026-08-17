@@ -8,6 +8,9 @@ export default function Progress() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [viewing, setViewing] = useState(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [beforeId, setBeforeId] = useState(null);
+  const [afterId, setAfterId] = useState(null);
 
   function reload() {
     setLoading(true);
@@ -31,6 +34,31 @@ export default function Progress() {
     reload();
   }
 
+  const sortedAsc = [...photos].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
+  const canCompare = photos.length >= 2;
+
+  function toggleCompare() {
+    if (!compareMode && canCompare) {
+      setBeforeId(sortedAsc[0].id);
+      setAfterId(sortedAsc[sortedAsc.length - 1].id);
+    }
+    setCompareMode((c) => !c);
+  }
+
+  const beforePhoto = sortedAsc.find((p) => p.id === beforeId) || null;
+  const afterPhoto = sortedAsc.find((p) => p.id === afterId) || null;
+
+  let gapLabel = null;
+  if (beforePhoto && afterPhoto) {
+    const d1 = new Date(beforePhoto.date + "T00:00:00");
+    const d2 = new Date(afterPhoto.date + "T00:00:00");
+    const diffDays = Math.abs(Math.round((d2 - d1) / 86400000));
+    gapLabel =
+      diffDays >= 14
+        ? `${Math.round(diffDays / 7)} weeks apart`
+        : `${diffDays} day${diffDays === 1 ? "" : "s"} apart`;
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -38,12 +66,80 @@ export default function Progress() {
           <h1 className="page-title">Progress Photos</h1>
           <p className="page-subtitle">A private timeline of your physique over time</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <IconPlus width={15} height={15} /> Add photo
-        </button>
+        <div className="flex gap-8">
+          {canCompare && (
+            <button
+              className={`btn ${compareMode ? "btn-primary" : "btn-secondary"}`}
+              onClick={toggleCompare}
+            >
+              Compare
+            </button>
+          )}
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <IconPlus width={15} height={15} /> Add photo
+          </button>
+        </div>
       </div>
 
-      {loading ? (
+      {compareMode && canCompare ? (
+        <div className="card">
+          <div className="grid grid-2 mb-16">
+            <div className="field">
+              <label>Before</label>
+              <select
+                className="select"
+                value={beforeId ?? ""}
+                onChange={(e) => setBeforeId(Number(e.target.value))}
+              >
+                {sortedAsc.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {formatFullDate(p.date)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>After</label>
+              <select
+                className="select"
+                value={afterId ?? ""}
+                onChange={(e) => setAfterId(Number(e.target.value))}
+              >
+                {sortedAsc.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {formatFullDate(p.date)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {gapLabel && (
+            <div className="text-sm font-semibold text-secondary mb-16" style={{ textAlign: "center" }}>
+              {gapLabel}
+            </div>
+          )}
+
+          <div className="grid grid-2">
+            <div className="flex-col gap-8" style={{ alignItems: "center" }}>
+              <img
+                src={beforePhoto?.photo_data}
+                alt={`Before photo from ${beforePhoto ? formatFullDate(beforePhoto.date) : ""}`}
+                style={{ width: "100%", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", objectFit: "cover" }}
+              />
+              <div className="text-sm font-semibold">{beforePhoto && formatFullDate(beforePhoto.date)}</div>
+            </div>
+            <div className="flex-col gap-8" style={{ alignItems: "center" }}>
+              <img
+                src={afterPhoto?.photo_data}
+                alt={`After photo from ${afterPhoto ? formatFullDate(afterPhoto.date) : ""}`}
+                style={{ width: "100%", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", objectFit: "cover" }}
+              />
+              <div className="text-sm font-semibold">{afterPhoto && formatFullDate(afterPhoto.date)}</div>
+            </div>
+          </div>
+        </div>
+      ) : loading ? (
         <div className="card empty-row">Loading…</div>
       ) : photos.length === 0 ? (
         <div className="card photo-empty-state">

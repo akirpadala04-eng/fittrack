@@ -15,6 +15,9 @@ import DateNav from "../components/DateNav";
 import CalorieRing from "../components/CalorieRing";
 import MacroBar from "../components/MacroBar";
 import WaterTracker from "../components/WaterTracker";
+import AchievementBadges from "../components/AchievementBadges";
+import ActivityHeatmap from "../components/ActivityHeatmap";
+import MacroDonut from "../components/MacroDonut";
 import { IconFlame, IconDumbbell, IconClock, IconPlus, IconCalendar } from "../components/Icons";
 
 const MEAL_LABELS = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snacks" };
@@ -98,7 +101,13 @@ export default function Dashboard() {
           <MacroBar label="Protein" color="var(--series-protein)" amount={food.protein} goal={goals.protein} />
           <MacroBar label="Carbs" color="var(--series-carbs)" amount={food.carbs} goal={goals.carbs} />
           <MacroBar label="Fat" color="var(--series-fat)" amount={food.fat} goal={goals.fat} />
+          <MacroDonut protein={food.protein} carbs={food.carbs} fat={food.fat} />
         </div>
+      </div>
+
+      <div className="grid grid-2 mt-24" style={{ alignItems: "start" }}>
+        <AchievementBadges />
+        <ActivityHeatmap weeks={12} />
       </div>
 
       <div className="grid grid-4 mt-24">
