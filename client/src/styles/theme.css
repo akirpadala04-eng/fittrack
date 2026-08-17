@@ -5,6 +5,7 @@
   --brand: #1baf7a;       /* aqua/green — primary brand, "on track" feel */
   --brand-dark: #0d8f62;
   --brand-light: #e6f7f1;
+  --brand-mid: #8ad9be;   /* intermediate tint, between brand-light and brand — used for heatmap "partial" cells */
 
   /* ---- Categorical (validated palette, fixed order) ---- */
   --series-protein: #2a78d6;  /* blue */
@@ -1215,4 +1216,276 @@ h1, h2, h3, h4, p {
   color: var(--text-muted);
   flex-shrink: 0;
   font-weight: 600;
+}
+
+/* ---------- Achievement badges ---------- */
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.badge-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 14px 10px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: #fbfcfa;
+}
+
+.badge-tile-unlocked {
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+
+.badge-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  background: #eef1ee;
+  color: var(--text-muted);
+}
+
+.badge-tile-unlocked .badge-icon-circle {
+  background: var(--brand);
+  color: #fff;
+}
+
+.badge-lock-overlay {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-card);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.badge-tile-locked .badge-label {
+  color: var(--text-secondary);
+}
+
+.badge-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.badge-progress {
+  width: 100%;
+  margin-top: 2px;
+}
+
+.badge-progress .bar-track {
+  height: 5px;
+}
+
+.badge-progress-label {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* ---------- Activity heatmap ---------- */
+
+.heatmap-scroll {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.heatmap-months {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 14px;
+  gap: 3px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 4px;
+  margin-left: 22px;
+}
+
+.heatmap-body {
+  display: flex;
+  gap: 3px;
+}
+
+.heatmap-weekday-labels {
+  display: grid;
+  grid-template-rows: repeat(7, 14px);
+  gap: 3px;
+  font-size: 9.5px;
+  color: var(--text-muted);
+  margin-right: 4px;
+  width: 18px;
+  flex-shrink: 0;
+}
+
+.heatmap-weekday-labels span {
+  display: flex;
+  align-items: center;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 14px);
+  grid-auto-columns: 14px;
+  gap: 3px;
+}
+
+.heatmap-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--border);
+}
+
+.heatmap-cell-food {
+  background: var(--brand-mid);
+}
+
+.heatmap-cell-both {
+  background: var(--brand);
+}
+
+.heatmap-cell-future {
+  background: transparent;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.heatmap-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* ---------- Macro donut ---------- */
+
+.macro-donut-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.macro-donut-center-value {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.macro-donut-center-label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.macro-donut-legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.macro-donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.macro-donut-legend-item .macro-dot {
+  width: 8px;
+  height: 8px;
+}
+
+/* ---------- Celebration toast + confetti ---------- */
+
+.celebration-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--brand-light);
+  color: var(--brand-dark);
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 12px;
+  animation: celebration-toast-in 0.2s ease;
+}
+
+@keyframes celebration-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 80;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 8px;
+  height: 14px;
+  opacity: 0.9;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.4, 0.1, 0.6, 0.9);
+  animation-fill-mode: forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(105vh) translateX(var(--confetti-drift, 0px)) rotate(540deg);
+    opacity: 0.3;
+  }
 }
