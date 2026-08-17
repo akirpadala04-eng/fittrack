@@ -60,6 +60,14 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS physique_photos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    note TEXT,
+    photo_data TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     display_name TEXT NOT NULL DEFAULT 'there',
@@ -78,6 +86,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_food_logs_date ON food_logs(date);
   CREATE INDEX IF NOT EXISTS idx_workout_logs_date ON workout_logs(date);
   CREATE INDEX IF NOT EXISTS idx_foods_name ON foods(name);
+  CREATE INDEX IF NOT EXISTS idx_physique_photos_date ON physique_photos(date);
 `);
 
 // Seed settings row

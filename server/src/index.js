@@ -8,7 +8,8 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
-app.use(express.json());
+// Raised limit (default is 100kb) so base64-encoded progress photos can be uploaded as JSON.
+app.use(express.json({ limit: "15mb" }));
 
 // ---------- Helpers ----------
 function todayStr() {
@@ -224,6 +225,40 @@ app.delete("/api/workout-logs/:id", (req, res) => {
   res.status(204).end();
 });
 
+// ---------- Physique Photos ----------
+
+app.get("/api/photos", (req, res) => {
+  const rows = db
+    .prepare("SELECT id, date, note, photo_data, created_at FROM physique_photos ORDER BY date DESC, id DESC")
+    .all();
+  res.json(rows);
+});
+
+app.post("/api/photos", (req, res) => {
+  const { date, note, photo_data } = req.body;
+  if (!photo_data || typeof photo_data !== "string" || !photo_data.startsWith("data:image/")) {
+    return res.status(400).json({ error: "photo_data must be a base64 image data URL" });
+  }
+  // Rough sanity cap (~12MB of base64 text) in addition to the express.json limit.
+  if (photo_data.length > 12 * 1024 * 1024) {
+    return res.status(413).json({ error: "That photo is too large. Try a smaller image." });
+  }
+  const info = db
+    .prepare("INSERT INTO physique_photos (date, note, photo_data) VALUES (?, ?, ?)")
+    .run(date || todayStr(), note || null, photo_data);
+  const photo = db
+    .prepare("SELECT id, date, note, photo_data, created_at FROM physique_photos WHERE id = ?")
+    .get(info.lastInsertRowid);
+  res.status(201).json(photo);
+});
+
+app.delete("/api/photos/:id", (req, res) => {
+  const existing = db.prepare("SELECT * FROM physique_photos WHERE id = ?").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: "Photo not found" });
+  db.prepare("DELETE FROM physique_photos WHERE id = ?").run(req.params.id);
+  res.status(204).end();
+});
+
 // ---------- Settings ----------
 
 app.get("/api/settings", (req, res) => {
@@ -340,6 +375,96 @@ app.get("/api/history", (req, res) => {
     .map((r) => ({ date: r.date, calories: round1(r.calories), burned: round1(burnMap[r.date] || 0) }))
     .reverse();
   res.json(combined);
+});
+
+// ---------- Fitness chatbot (Claude API) ----------
+
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
+
+const CHAT_SYSTEM_PROMPT = `You are FitBot, a friendly fitness assistant embedded inside the FitTrack app.
+
+Scope: you ONLY answer questions about fitness, exercise, workouts, training programs, sports performance, stretching, recovery, nutrition, calories, macros, healthy eating, weight management, and using the FitTrack app itself.
+
+If the user asks about anything outside that scope (general knowledge, coding, news, entertainment, relationships, homework, etc.), politely decline in one short sentence and steer back to fitness — do not answer the off-topic question even partially.
+
+You are not a doctor. For injuries, medical conditions, medications, pregnancy, eating disorders, or anything that sounds like a medical concern, give only general safety guidance and recommend they consult a qualified healthcare professional — never diagnose or prescribe.
+
+Keep replies concise (usually under 120 words), practical, and encouraging. Use plain text, not markdown tables.`;
+
+// Very small in-memory rate limiter (per server instance) so a public demo
+// can't run up API costs. Not for production multi-instance use.
+const rateLimitBuckets = new Map();
+const RATE_LIMIT_MAX = 20; // requests
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // per 10 minutes, per IP
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const bucket = rateLimitBuckets.get(ip) || [];
+  const recent = bucket.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  recent.push(now);
+  rateLimitBuckets.set(ip, recent);
+  return recent.length > RATE_LIMIT_MAX;
+}
+
+app.post("/api/chat", async (req, res) => {
+  if (!ANTHROPIC_API_KEY) {
+    return res.status(503).json({
+      error:
+        "The fitness assistant isn't configured yet. The site owner needs to add an ANTHROPIC_API_KEY environment variable.",
+    });
+  }
+
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || "unknown";
+  if (isRateLimited(ip)) {
+    return res.status(429).json({ error: "Too many messages — please wait a bit and try again." });
+  }
+
+  const { messages } = req.body;
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: "messages array is required" });
+  }
+
+  // Keep only the last 12 turns and cap message length to keep costs/latency bounded.
+  const trimmed = messages.slice(-12).map((m) => ({
+    role: m.role === "assistant" ? "assistant" : "user",
+    content: String(m.content || "").slice(0, 2000),
+  }));
+
+  try {
+    const upstream = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 400,
+        system: CHAT_SYSTEM_PROMPT,
+        messages: trimmed,
+      }),
+    });
+
+    const data = await upstream.json();
+
+    if (!upstream.ok) {
+      console.error("Anthropic API error:", data);
+      return res.status(502).json({ error: "The fitness assistant is temporarily unavailable. Please try again shortly." });
+    }
+
+    const reply = (data.content || [])
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("\n")
+      .trim();
+
+    res.json({ reply: reply || "Sorry, I didn't catch that — could you rephrase your fitness question?" });
+  } catch (err) {
+    console.error("Chat endpoint error:", err);
+    res.status(500).json({ error: "Something went wrong reaching the fitness assistant." });
+  }
 });
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
