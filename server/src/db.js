@@ -68,6 +68,45 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS workout_plan (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    split_key TEXT NOT NULL,
+    days_per_week INTEGER NOT NULL,
+    focus TEXT NOT NULL,
+    plan_json TEXT NOT NULL,
+    generated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS body_measurements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    weight_kg REAL,
+    waist_cm REAL,
+    chest_cm REAL,
+    hips_cm REAL,
+    arms_cm REAL,
+    thighs_cm REAL,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS water_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    amount_ml REAL NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS personal_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exercise_name TEXT NOT NULL,
+    weight_kg REAL NOT NULL,
+    reps INTEGER NOT NULL DEFAULT 1,
+    date TEXT NOT NULL,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     display_name TEXT NOT NULL DEFAULT 'there',
@@ -87,7 +126,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_workout_logs_date ON workout_logs(date);
   CREATE INDEX IF NOT EXISTS idx_foods_name ON foods(name);
   CREATE INDEX IF NOT EXISTS idx_physique_photos_date ON physique_photos(date);
+  CREATE INDEX IF NOT EXISTS idx_body_measurements_date ON body_measurements(date);
+  CREATE INDEX IF NOT EXISTS idx_water_logs_date ON water_logs(date);
+  CREATE INDEX IF NOT EXISTS idx_personal_records_exercise ON personal_records(exercise_name);
 `);
+
+// Migration: add is_favorite to foods if it doesn't exist yet (older DBs predate this column)
+const foodColumns = db.prepare("PRAGMA table_info(foods)").all().map((c) => c.name);
+if (!foodColumns.includes("is_favorite")) {
+  db.exec("ALTER TABLE foods ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0");
+}
 
 // Seed settings row
 const settingsCount = db.prepare("SELECT COUNT(*) AS c FROM settings").get().c;

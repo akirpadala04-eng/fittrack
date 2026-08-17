@@ -24,7 +24,7 @@ function round1(n) {
 
 // Search / list foods
 app.get("/api/foods", (req, res) => {
-  const { q, category } = req.query;
+  const { q, category, favorite } = req.query;
   let sql = "SELECT * FROM foods WHERE 1=1";
   const params = [];
   if (q) {
@@ -35,6 +35,9 @@ app.get("/api/foods", (req, res) => {
     sql += " AND category = ?";
     params.push(category);
   }
+  if (favorite) {
+    sql += " AND is_favorite = 1";
+  }
   sql += " ORDER BY is_custom DESC, name ASC LIMIT 200";
   const foods = db.prepare(sql).all(...params);
   res.json(foods);
@@ -43,6 +46,32 @@ app.get("/api/foods", (req, res) => {
 app.get("/api/foods/categories", (req, res) => {
   const rows = db.prepare("SELECT DISTINCT category FROM foods ORDER BY category").all();
   res.json(rows.map((r) => r.category));
+});
+
+// Most recently logged distinct foods (for quick-add in the Add Food modal)
+app.get("/api/foods/recent", (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit || "8", 10) || 8, 30);
+  const rows = db
+    .prepare(
+      `SELECT f.* FROM foods f
+       WHERE f.id IN (
+         SELECT food_id FROM (
+           SELECT food_id, MAX(created_at) AS last_logged
+           FROM food_logs GROUP BY food_id
+         ) ORDER BY last_logged DESC LIMIT ?
+       )
+       ORDER BY (SELECT MAX(created_at) FROM food_logs WHERE food_logs.food_id = f.id) DESC`
+    )
+    .all(limit);
+  res.json(rows);
+});
+
+app.put("/api/foods/:id/favorite", (req, res) => {
+  const food = db.prepare("SELECT * FROM foods WHERE id = ?").get(req.params.id);
+  if (!food) return res.status(404).json({ error: "Food not found" });
+  const isFavorite = req.body.is_favorite ? 1 : 0;
+  db.prepare("UPDATE foods SET is_favorite = ? WHERE id = ?").run(isFavorite, req.params.id);
+  res.json(db.prepare("SELECT * FROM foods WHERE id = ?").get(req.params.id));
 });
 
 app.get("/api/foods/:id", (req, res) => {
@@ -259,6 +288,47 @@ app.delete("/api/photos/:id", (req, res) => {
   res.status(204).end();
 });
 
+// ---------- Workout Plan (Split Planner) ----------
+
+app.get("/api/workout-plan", (req, res) => {
+  const row = db.prepare("SELECT * FROM workout_plan WHERE id = 1").get();
+  if (!row) return res.json(null);
+  res.json({
+    split_key: row.split_key,
+    days_per_week: row.days_per_week,
+    focus: row.focus,
+    plan: JSON.parse(row.plan_json),
+    generated_at: row.generated_at,
+  });
+});
+
+app.put("/api/workout-plan", (req, res) => {
+  const { split_key, days_per_week, focus, plan } = req.body;
+  if (!split_key || !days_per_week || !focus || !plan) {
+    return res.status(400).json({ error: "split_key, days_per_week, focus, and plan are required" });
+  }
+  db.prepare(
+    `INSERT INTO workout_plan (id, split_key, days_per_week, focus, plan_json, generated_at)
+     VALUES (1, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(id) DO UPDATE SET
+       split_key=excluded.split_key, days_per_week=excluded.days_per_week,
+       focus=excluded.focus, plan_json=excluded.plan_json, generated_at=excluded.generated_at`
+  ).run(split_key, days_per_week, focus, JSON.stringify(plan));
+  const row = db.prepare("SELECT * FROM workout_plan WHERE id = 1").get();
+  res.json({
+    split_key: row.split_key,
+    days_per_week: row.days_per_week,
+    focus: row.focus,
+    plan: JSON.parse(row.plan_json),
+    generated_at: row.generated_at,
+  });
+});
+
+app.delete("/api/workout-plan", (req, res) => {
+  db.prepare("DELETE FROM workout_plan WHERE id = 1").run();
+  res.status(204).end();
+});
+
 // ---------- Settings ----------
 
 app.get("/api/settings", (req, res) => {
@@ -321,6 +391,10 @@ app.get("/api/summary", (req, res) => {
   const netCalories = round1(caloriesConsumed - caloriesBurned);
   const remaining = round1(settings.calorie_goal - netCalories);
 
+  const waterTotal = db
+    .prepare("SELECT COALESCE(SUM(amount_ml), 0) AS total FROM water_logs WHERE date = ?")
+    .get(date).total;
+
   res.json({
     date,
     goals: {
@@ -328,6 +402,11 @@ app.get("/api/summary", (req, res) => {
       protein: settings.protein_goal,
       carbs: settings.carb_goal,
       fat: settings.fat_goal,
+      water_ml: settings.water_goal_ml,
+    },
+    water: {
+      consumedMl: round1(waterTotal),
+      goalMl: settings.water_goal_ml,
     },
     food: {
       calories: caloriesConsumed,
@@ -375,6 +454,123 @@ app.get("/api/history", (req, res) => {
     .map((r) => ({ date: r.date, calories: round1(r.calories), burned: round1(burnMap[r.date] || 0) }))
     .reverse();
   res.json(combined);
+});
+
+// ---------- Logging streak ----------
+// Current consecutive-day streak of logging at least one food entry, ending today or yesterday
+// (so the streak doesn't reset to 0 the moment you wake up before logging breakfast).
+app.get("/api/streak", (req, res) => {
+  const dates = new Set(
+    db.prepare("SELECT DISTINCT date FROM food_logs").all().map((r) => r.date)
+  );
+  let streak = 0;
+  let cursor = todayStr();
+  if (!dates.has(cursor)) {
+    // today has no entries yet — start counting from yesterday instead
+    const d = new Date(cursor + "T00:00:00");
+    d.setDate(d.getDate() - 1);
+    cursor = d.toISOString().slice(0, 10);
+  }
+  while (dates.has(cursor)) {
+    streak += 1;
+    const d = new Date(cursor + "T00:00:00");
+    d.setDate(d.getDate() - 1);
+    cursor = d.toISOString().slice(0, 10);
+  }
+  res.json({ streak, loggedToday: dates.has(todayStr()) });
+});
+
+// ---------- Body Measurements ----------
+
+app.get("/api/measurements", (req, res) => {
+  const rows = db.prepare("SELECT * FROM body_measurements ORDER BY date DESC, id DESC").all();
+  res.json(rows);
+});
+
+app.post("/api/measurements", (req, res) => {
+  const { date, weight_kg, waist_cm, chest_cm, hips_cm, arms_cm, thighs_cm, notes } = req.body;
+  const hasAnyValue = [weight_kg, waist_cm, chest_cm, hips_cm, arms_cm, thighs_cm].some(
+    (v) => v !== undefined && v !== null && v !== ""
+  );
+  if (!hasAnyValue) {
+    return res.status(400).json({ error: "Enter at least one measurement" });
+  }
+  const info = db
+    .prepare(
+      `INSERT INTO body_measurements (date, weight_kg, waist_cm, chest_cm, hips_cm, arms_cm, thighs_cm, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      date || todayStr(),
+      weight_kg || null,
+      waist_cm || null,
+      chest_cm || null,
+      hips_cm || null,
+      arms_cm || null,
+      thighs_cm || null,
+      notes || null
+    );
+  res.status(201).json(db.prepare("SELECT * FROM body_measurements WHERE id = ?").get(info.lastInsertRowid));
+});
+
+app.delete("/api/measurements/:id", (req, res) => {
+  const existing = db.prepare("SELECT * FROM body_measurements WHERE id = ?").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: "Measurement not found" });
+  db.prepare("DELETE FROM body_measurements WHERE id = ?").run(req.params.id);
+  res.status(204).end();
+});
+
+// ---------- Water Logs ----------
+
+app.get("/api/water-logs", (req, res) => {
+  const date = req.query.date || todayStr();
+  const rows = db.prepare("SELECT * FROM water_logs WHERE date = ? ORDER BY created_at ASC").all(date);
+  const total = rows.reduce((s, r) => s + r.amount_ml, 0);
+  res.json({ date, entries: rows, totalMl: round1(total) });
+});
+
+app.post("/api/water-logs", (req, res) => {
+  const { date, amount_ml } = req.body;
+  if (!amount_ml || amount_ml <= 0) return res.status(400).json({ error: "amount_ml must be a positive number" });
+  const info = db
+    .prepare("INSERT INTO water_logs (date, amount_ml) VALUES (?, ?)")
+    .run(date || todayStr(), amount_ml);
+  res.status(201).json(db.prepare("SELECT * FROM water_logs WHERE id = ?").get(info.lastInsertRowid));
+});
+
+app.delete("/api/water-logs/:id", (req, res) => {
+  const existing = db.prepare("SELECT * FROM water_logs WHERE id = ?").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: "Water log not found" });
+  db.prepare("DELETE FROM water_logs WHERE id = ?").run(req.params.id);
+  res.status(204).end();
+});
+
+// ---------- Personal Records ----------
+
+app.get("/api/prs", (req, res) => {
+  const rows = db.prepare("SELECT * FROM personal_records ORDER BY exercise_name ASC, date DESC").all();
+  res.json(rows);
+});
+
+app.post("/api/prs", (req, res) => {
+  const { exercise_name, weight_kg, reps, date, notes } = req.body;
+  if (!exercise_name || !weight_kg) {
+    return res.status(400).json({ error: "exercise_name and weight_kg are required" });
+  }
+  const info = db
+    .prepare(
+      `INSERT INTO personal_records (exercise_name, weight_kg, reps, date, notes)
+       VALUES (?, ?, ?, ?, ?)`
+    )
+    .run(exercise_name.trim(), weight_kg, reps || 1, date || todayStr(), notes || null);
+  res.status(201).json(db.prepare("SELECT * FROM personal_records WHERE id = ?").get(info.lastInsertRowid));
+});
+
+app.delete("/api/prs/:id", (req, res) => {
+  const existing = db.prepare("SELECT * FROM personal_records WHERE id = ?").get(req.params.id);
+  if (!existing) return res.status(404).json({ error: "Personal record not found" });
+  db.prepare("DELETE FROM personal_records WHERE id = ?").run(req.params.id);
+  res.status(204).end();
 });
 
 // ---------- Fitness chatbot (Claude API) ----------
