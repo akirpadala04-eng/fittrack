@@ -86,6 +86,10 @@ export const api = {
   // Summary / history
   getSummary: (date) => request(`/summary?date=${date}`),
   getHistory: (days = 14) => request(`/history?days=${days}`),
+
+  // Achievements / activity heatmap
+  getAchievements: () => request("/achievements"),
+  getActivityHeatmap: (weeks = 12) => request(`/activity-heatmap?weeks=${weeks}`),
 };
 
 export function todayStr() {
