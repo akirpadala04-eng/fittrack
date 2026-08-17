@@ -160,3 +160,41 @@ export const IconStarFilled = (p) => (
     <path d="m12 4 2.4 5.1 5.6.6-4.2 3.8 1.2 5.5L12 16.2l-5 2.8 1.2-5.5-4.2-3.8 5.6-.6z" />
   </svg>
 );
+
+export const IconFire = (p) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <path d="M12 3s5 4.2 5 9a5 5 0 0 1-10 0c0-1.2.5-2.1 1-3 .3 1 1 1.6 1.6 1.6-.4-2 .3-4 2.4-7.6Z" />
+    <path d="M9.5 15.2c0 1.4 1.1 2.3 2.5 2.3s2.5-1 2.5-2.3" />
+  </svg>
+);
+
+export const IconLock = (p) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <rect x="5" y="10.5" width="14" height="10" rx="2" />
+    <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+    <circle cx="12" cy="15" r="1.4" />
+  </svg>
+);
+
+export const IconTarget = (p) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <circle cx="12" cy="12" r="8.5" />
+    <circle cx="12" cy="12" r="5" />
+    <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const IconMedal = (p) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <path d="m8 3 4 7 4-7" />
+    <circle cx="12" cy="15" r="5.5" />
+    <path d="M12 12.5v5M9.8 15h4.4" />
+  </svg>
+);
+
+export const IconSparkle = (p) => (
+  <svg viewBox="0 0 24 24" {...base} {...p}>
+    <path d="M12 3.5c.5 3.2 1.4 4.1 4.6 4.6-3.2.5-4.1 1.4-4.6 4.6-.5-3.2-1.4-4.1-4.6-4.6 3.2-.5 4.1-1.4 4.6-4.6Z" />
+    <path d="M18.5 14c.3 1.7.8 2.2 2.5 2.5-1.7.3-2.2.8-2.5 2.5-.3-1.7-.8-2.2-2.5-2.5 1.7-.3 2.2-.8 2.5-2.5Z" />
+  </svg>
+);

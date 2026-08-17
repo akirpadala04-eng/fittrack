@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { IconDroplet, IconTrash } from "./Icons";
+import Confetti from "./Confetti";
 
 const QUICK_ADD_ML = [250, 500, 750];
 
@@ -8,11 +9,16 @@ export default function WaterTracker({ date, goalMl }) {
   const [entries, setEntries] = useState([]);
   const [totalMl, setTotalMl] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [celebrate, setCelebrate] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const prevTotalRef = useRef(0);
+  const toastTimeoutRef = useRef(null);
 
   function reload() {
     api.getWaterLogs(date).then((r) => {
       setEntries(r.entries);
       setTotalMl(r.totalMl);
+      prevTotalRef.current = r.totalMl;
       setLoading(false);
     });
   }
@@ -23,9 +29,26 @@ export default function WaterTracker({ date, goalMl }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
 
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
+
   async function addWater(amountMl) {
+    const before = prevTotalRef.current;
     await api.createWaterLog({ date, amount_ml: amountMl });
-    reload();
+    const r = await api.getWaterLogs(date);
+    setEntries(r.entries);
+    setTotalMl(r.totalMl);
+    const after = r.totalMl;
+    if (goalMl > 0 && before < goalMl && after >= goalMl) {
+      setCelebrate(true);
+      setShowToast(true);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = setTimeout(() => setShowToast(false), 3000);
+    }
+    prevTotalRef.current = after;
   }
 
   async function removeLast() {
@@ -74,8 +97,12 @@ export default function WaterTracker({ date, goalMl }) {
               </button>
             ))}
           </div>
+          {showToast && (
+            <div className="celebration-toast">🎉 Daily water goal reached!</div>
+          )}
         </>
       )}
+      <Confetti active={celebrate} />
     </div>
   );
 }
